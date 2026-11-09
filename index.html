@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomePlan – Generator Denah Rumah ke AutoCAD (DXF)</title>
+<style>
+:root{--navy:#1C2A35;--navy2:#26384A;--sage:#3E8E82;--sage-d:#2F776C;--sage-l:#E3F0ED;--ink:#1C2A35;--mute:#64748B;--line:#DDE5E2;--bg:#EEF2F0;--warn:#C0392B}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:14px/1.5 Inter,"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+.app{display:grid;grid-template-columns:430px 1fr;min-height:100vh}
+
+/* ---------- Sidebar ---------- */
+.side{background:linear-gradient(180deg,var(--navy) 0%,#17232D 100%);color:#E8EEF2;padding:22px 20px 28px;overflow:auto;max-height:100vh;position:sticky;top:0}
+.side::-webkit-scrollbar{width:8px}.side::-webkit-scrollbar-thumb{background:#3A4C5C;border-radius:8px}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--sage),#5FB3A4);display:grid;place-items:center;box-shadow:0 6px 16px rgba(62,142,130,.35)}
+.logo svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.brand h1{font-size:22px;letter-spacing:.2px;margin:0;color:#fff;line-height:1.1}
+.brand span{font-size:12px;color:#9FB1BF}
+.nav{display:flex;gap:6px;margin-bottom:16px;background:rgba(255,255,255,.06);padding:5px;border-radius:12px}
+.nav a{flex:1;text-align:center;padding:7px 4px;border-radius:8px;color:#C5D2DC;text-decoration:none;font-size:12.5px;font-weight:500;transition:background .2s,color .2s}
+.nav a:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav a:focus-visible{outline:2px solid #5FB3A4;outline-offset:1px}
+
+/* ---------- Kartu ---------- */
+.card{background:#fff;color:var(--ink);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);scroll-margin-top:12px}
+.card h2{display:flex;align-items:center;gap:8px;font-size:14.5px;margin:0 0 4px;font-weight:650}
+.card h2 i{width:24px;height:24px;border-radius:8px;background:var(--sage-l);color:var(--sage-d);font-style:normal;font-size:12px;font-weight:700;display:grid;place-items:center}
+p.s{margin:0 0 10px;color:var(--mute);font-size:12.5px}
+.card h3{font-size:13px;margin:14px 0 6px}
+label{display:block;font-size:11.5px;font-weight:500;color:var(--mute)}
+label.ck{display:flex;gap:9px;align-items:flex-start;color:var(--ink);font-size:12.5px;font-weight:400;margin:8px 0;line-height:1.4;cursor:pointer}
+label.ck input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--sage);flex:0 0 auto}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#F8FAF9;transition:border-color .2s,box-shadow .2s,background .2s}
+input:hover,select:hover{border-color:#B9C8C3}
+input:focus,select:focus{outline:none;border-color:var(--sage);background:#fff;box-shadow:0 0 0 3px rgba(62,142,130,.18)}
+.g{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+
+/* ---------- Daftar ruangan (dirender oleh JS) ---------- */
+#rooms{display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:2px}
+.room{display:grid;grid-template-columns:1fr 62px 62px 72px;gap:6px;align-items:end;padding:10px;background:#F6F9F8;border:1px solid var(--line);border-radius:12px;transition:border-color .2s,box-shadow .2s}
+.room:hover{border-color:#B5CEC8;box-shadow:0 3px 10px rgba(30,60,55,.07)}
+.room .nm{grid-column:1/-1}
+.room .acts{grid-column:1/-1;display:flex;gap:6px;justify-content:space-between;align-items:center}
+.room .acts span{font-size:11px;color:var(--mute)}
+.room .acts button{padding:3px 9px;font-size:12px}
+.room .acts button[data-a="del"]:hover{border-color:var(--warn);color:var(--warn);background:#FDF1EF}
+
+/* ---------- Tombol ---------- */
+button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;cursor:pointer;font-weight:500;transition:transform .15s,box-shadow .2s,background .2s,border-color .2s,color .2s}
+button:hover{border-color:var(--sage);color:var(--sage-d);background:var(--sage-l)}
+button:active{transform:scale(.97)}
+button:focus-visible{outline:2px solid var(--sage);outline-offset:2px}
+button.p{background:linear-gradient(135deg,var(--sage),var(--sage-d));border-color:transparent;color:#fff;font-weight:650;padding:11px 14px;box-shadow:0 6px 16px rgba(47,119,108,.32)}
+button.p:hover{background:linear-gradient(135deg,#4AA394,var(--sage));color:#fff;transform:translateY(-2px);box-shadow:0 10px 22px rgba(47,119,108,.4)}
+button#svg{border:1.5px solid var(--sage);color:var(--sage-d);background:#fff;font-weight:650;padding:11px 14px}
+button#svg:hover{background:var(--sage-l);transform:translateY(-2px);box-shadow:0 8px 18px rgba(47,119,108,.18)}
+button#add{flex:0 0 auto;background:var(--sage-l);border-color:transparent;color:var(--sage-d);font-weight:650}
+button#add:hover{background:var(--sage);color:#fff}
+.row{display:flex;gap:8px}.row>*{flex:1}
+#info{margin-top:12px;font-size:12.5px;padding:10px 12px;border-radius:10px;background:var(--sage-l);color:#1F5A51;border-left:4px solid var(--sage)}
+#info.bad{background:#FDF1EF;color:var(--warn);border-left-color:var(--warn)}
+ol{padding-left:18px;margin:6px 0 10px;font-size:12.5px;color:var(--mute)}
+
+/* ---------- Kanvas ---------- */
+.stage{padding:22px 26px;display:flex;flex-direction:column;min-width:0;height:100vh;position:sticky;top:0}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.top h2{margin:0;font-size:20px;letter-spacing:.1px}
+.top p{margin:2px 0 0;color:var(--mute);font-size:12.5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend b{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:550;padding:4px 10px;border-radius:99px;background:#fff;border:1px solid var(--line);color:#41505C}
+.legend b:before{content:"";width:9px;height:9px;border-radius:3px;background:var(--c)}
+.canvas{flex:1;min-height:0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:0 10px 30px rgba(28,42,53,.08)}
+#view{display:block;width:100%;height:100%;min-height:420px;border-radius:12px;
+  background-color:#fff;
+  background-image:linear-gradient(#DCE5E2 1px,transparent 1px),linear-gradient(90deg,#DCE5E2 1px,transparent 1px),linear-gradient(#EEF3F1 1px,transparent 1px),linear-gradient(90deg,#EEF3F1 1px,transparent 1px);
+  background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;max-height:none}
+  .stage{height:auto;position:static;padding:16px}
+  #view{height:70vh}
+  .canvas{min-height:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg></div>
+    <div><h1>HomePlan</h1><span>Generator denah rumah ke AutoCAD</span></div>
+  </div>
+  <nav class="nav" aria-label="Navigasi bagian">
+    <a href="#c-lahan">Data Lahan</a><a href="#c-ruang">Ruangan</a><a href="#c-ekspor">Ekspor</a>
+  </nav>
+
+  <section class="card" id="c-lahan">
+    <h2><i>1</i>Data lahan</h2>
+    <p class="s">Isi data lahan dan ruangan. Denah disusun otomatis berdasarkan zona, lalu diekspor ke DXF untuk diedit di AutoCAD.</p>
+    <div class="g">
+      <label>Lebar lahan (m)<input id="lw" type="number" step="0.1" min="3" value="12"></label>
+      <label>Panjang lahan (m)<input id="ll" type="number" step="0.1" min="3" value="14"></label>
+      <label>Tebal dinding (m)<input id="wt" type="number" step="0.01" min="0.05" value="0.15"></label>
+      <label>Sempadan / jarak ke batas lahan (m)<input id="sp" type="number" step="0.1" min="0" value="0.5"></label>
+    </div>
+    <label class="ck"><input type="checkbox" id="zone" checked><span>Susun otomatis per zona: teras → publik (tamu, garasi) → servis (makan, dapur, kamar mandi) → privat (kamar tidur), dari depan ke belakang</span></label>
+    <label class="ck"><input type="checkbox" id="eq" checked><span>Samakan kedalaman ruangan dalam satu baris (tanpa celah antar dinding)</span></label>
+    <label class="ck"><input type="checkbox" id="hatch" checked><span>Arsir dinding (SOLID) pada gambar dan DXF</span></label>
+  </section>
+
+  <section class="card" id="c-ruang">
+    <h2><i>2</i>Daftar ruangan</h2>
+    <div id="rooms"></div>
+    <div class="row" style="margin-top:10px">
+      <select id="addType"></select>
+      <button id="add">+ Tambah ruangan</button>
+    </div>
+    <div id="info"></div>
+  </section>
+
+  <section class="card" id="c-ekspor">
+    <h2><i>3</i>Pengaturan ekspor</h2>
+    <label style="margin-top:8px">Satuan gambar di AutoCAD
+      <select id="unit"><option value="1">Meter (1 unit = 1 m)</option><option value="100">Sentimeter (1 unit = 1 cm)</option><option value="1000" selected>Milimeter (1 unit = 1 mm)</option></select>
+    </label>
+    <div class="row" style="margin-top:12px">
+      <button class="p" id="dxf">Unduh DXF</button>
+      <button id="svg">Unduh SVG</button>
+    </div>
+    <h3>Cara membuka di AutoCAD</h3>
+    <ol>
+      <li>Unduh file DXF.</li>
+      <li>Di AutoCAD: File → Open, pilih tipe file <b>DXF</b>.</li>
+      <li>Edit per layer: LAHAN, DINDING, ARSIR, PINTU, JENDELA, FURNITUR, DIMENSI, TEKS.</li>
+    </ol>
+    <p class="s">Ukuran ruangan dihitung dari as ke as dinding. Ruangan yang berhimpitan memakai satu dinding bersama, dan jendela hanya dipasang di dinding luar. Pintu "Auto" dipilih ke sisi yang berbatasan dengan ruangan lain (ruang tamu dan garasi menghadap depan). Dimensi berupa garis dan teks biasa (bukan objek DIMENSION) agar mudah diedit.</p>
+  </section>
+</aside>
+
+<main class="stage">
+  <header class="top">
+    <div><h2>Pratinjau Denah</h2><p>Perubahan input langsung tampil di kanvas. Satuan gambar: meter.</p></div>
+    <div class="legend" aria-label="Legenda layer">
+      <b style="--c:#2B3944">Dinding</b><b style="--c:#0F7B3F">Pintu</b><b style="--c:#1F5FBF">Jendela</b><b style="--c:#9A5B13">Furnitur</b><b style="--c:#B3261E">Dimensi</b><b style="--c:#0F6E6E">Teks</b>
+    </div>
+  </header>
+  <div class="canvas"><svg id="view" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pratinjau denah"></svg></div>
+</main>
+</div>
+
+<script>
+// ---------- Konfigurasi tipe ruangan (z: 0 teras, 1 publik, 2 servis/semi, 3 privat) ----------
+const TYPES={
+  teras:{n:'Teras',w:4,l:1.5,door:0,win:0,open:true,z:0},
+  tamu:{n:'Ruang Tamu',w:4,l:4,door:.9,win:1.5,z:1},
+  garasi:{n:'Garasi',w:3,l:4.5,door:2.4,win:0,z:1},
+  makan:{n:'Ruang Makan',w:4,l:3,door:.9,win:1.0,z:2},
+  dapur:{n:'Dapur',w:3,l:3,door:.8,win:1.0,z:2},
+  km:{n:'Kamar Mandi',w:2,l:3,door:.7,win:.6,z:2},
+  lain:{n:'Ruang Lain',w:3,l:3,door:.9,win:1.0,z:2},
+  kamar:{n:'Kamar Tidur',w:3.5,l:3.5,door:.9,win:1.2,z:3}
+};
+const RANK=['teras','tamu','garasi','makan','dapur','km','lain','kamar'];
+const OPP={S:'N',N:'S',E:'W',W:'E'};
+let uid=0;
+const mk=(t,name)=>({id:++uid,type:t,name:name||TYPES[t].n,w:TYPES[t].w,l:TYPES[t].l,door:'A'});
+let rooms=[mk('kamar','Kamar Tidur 1'),mk('dapur'),mk('teras'),mk('kamar','Kamar Tidur 2'),mk('tamu'),mk('km'),mk('makan'),mk('garasi')];
+const $=id=>document.getElementById(id);
+$('addType').innerHTML=Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+
+// ---------- Daftar ruangan (UI) ----------
+function renderList(){
+  $('rooms').innerHTML=rooms.map((r,i)=>`<div class="room" data-i="${i}">
+    <label class="nm">Nama<input data-f="name" value="${r.name.replace(/"/g,'&quot;')}"></label>
+    <label>Tipe<select data-f="type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${k==r.type?' selected':''}>${v.n}</option>`).join('')}</select></label>
+    <label>Lebar<input data-f="w" type="number" step="0.1" min="1" value="${r.w}"></label>
+    <label>Panjang<input data-f="l" type="number" step="0.1" min="1" value="${r.l}"></label>
+    <label>Pintu<select data-f="door">${[['A','Auto'],['S','S'],['E','E'],['N','N'],['W','W']].map(([v,t])=>`<option value="${v}"${v==r.door?' selected':''}>${t}</option>`).join('')}</select></label>
+    <div class="acts"><span>S=bawah, N=atas, E=kanan, W=kiri</span>
+      <span><button data-a="up" title="Naikkan">↑</button> <button data-a="dn" title="Turunkan">↓</button> <button data-a="del" title="Hapus">Hapus</button></span></div>
+  </div>`).join('');
+}
+$('rooms').addEventListener('change',e=>{
+  const row=e.target.closest('.room');if(!row||!e.target.dataset.f)return;
+  const r=rooms[+row.dataset.i],f=e.target.dataset.f;
+  r[f]=(f=='w'||f=='l')?Math.max(1,parseFloat(e.target.value)||1):e.target.value;
+  if(f=='type'&&!r.name.trim())r.name=TYPES[r.type].n;
+  draw();
+});
+$('rooms').addEventListener('click',e=>{
+  const a=e.target.dataset.a;if(!a)return;
+  const i=+e.target.closest('.room').dataset.i;
+  if(a=='del')rooms.splice(i,1);
+  if(a=='up'&&i>0)[rooms[i-1],rooms[i]]=[rooms[i],rooms[i-1]];
+  if(a=='dn'&&i<rooms.length-1)[rooms[i+1],rooms[i]]=[rooms[i],rooms[i+1]];
+  renderList();draw();
+});
+$('add').onclick=()=>{rooms.push(mk($('addType').value));renderList();draw()};
+['lw','ll','wt','sp'].forEach(id=>$(id).addEventListener('input',draw));
+['zone','eq','hatch'].forEach(id=>$(id).addEventListener('change',draw));
+
+// ---------- Primitif geometri ----------
+let E=[],WR=[],OP=[],OBS=[],SO=[];
+const R4=v=>Math.round(v*1e4)/1e4;
+const ln=(l,a,b,c,d)=>E.push({k:'l',l,a,b,c,d});
+const rect=(l,x,y,w,h)=>{ln(l,x,y,x+w,y);ln(l,x+w,y,x+w,y+h);ln(l,x+w,y+h,x,y+h);ln(l,x,y+h,x,y)};
+const arc=(l,x,y,r,a0,a1)=>E.push({k:'a',l,x,y,r,a0,a1});
+const cir=(l,x,y,r)=>E.push({k:'c',l,x,y,r});
+const txt=(l,x,y,h,s,rot=0)=>E.push({k:'t',l,x,y,h,s,rot});
+function hdim(x1,x2,y,s,ref){ln('DIMENSI',x1,y,x2,y);
+  [x1,x2].forEach(x=>{ln('DIMENSI',x-.08,y-.08,x+.08,y+.08);if(ref!=null){const g=y<ref?-1:1;ln('DIMENSI',x,ref+g*.1,x,y+g*.12)}});
+  txt('DIMENSI',(x1+x2)/2,y-.32,.22,s)}
+function vdim(y1,y2,x,s,ref){ln('DIMENSI',x,y1,x,y2);
+  [y1,y2].forEach(y=>{ln('DIMENSI',x-.08,y-.08,x+.08,y+.08);if(ref!=null){const g=x<ref?-1:1;ln('DIMENSI',ref+g*.1,y,x+g*.12,y)}});
+  txt('DIMENSI',x-.1,(y1+y2)/2,.22,s,90)}
+
+// ---------- Tata letak berdasarkan zona ----------
+function layout(LW,LL,s){
+  const UW=LW-2*s,zone=$('zone').checked,eq=$('eq').checked;
+  const ord=rooms.map((r,i)=>[r,i]);
+  if(zone)ord.sort((a,b)=>RANK.indexOf(a[0].type)-RANK.indexOf(b[0].type)||a[1]-b[1]);
+  const rows=[];let cur=null;
+  ord.forEach(([r])=>{
+    const z=zone?TYPES[r.type].z:0;
+    if(!cur||cur.z!=z||(cur.w+r.w>UW+1e-9&&cur.it.length)){cur={z,w:0,it:[]};rows.push(cur)}
+    cur.it.push(r);cur.w+=r.w;
+  });
+  let y=s,over=false,area=0;
+  rows.forEach(row=>{
+    const d=Math.max(...row.it.map(r=>r.l));let x=s;
+    row.it.forEach(r=>{
+      r.L=eq?d:r.l;r.px=x;r.py=y;x+=r.w;area+=r.w*r.L;
+      if(r.w>UW+1e-9||y+r.L>LL-s+1e-9)over=true;
+    });
+    y+=d;
+  });
+  return {over,area,maxY:y};
+}
+
+// ---------- Dinding, pintu, jendela ----------
+function sideGeom(x,y,w,l,s){
+  return {S:{P:[x,y],d:[1,0],n:[0,1],L:w},N:{P:[x,y+l],d:[1,0],n:[0,-1],L:w},
+          W:{P:[x,y],d:[0,1],n:[1,0],L:l},E:{P:[x+w,y],d:[0,1],n:[-1,0],L:l}}[s];
+}
+// panjang bagian sisi (a..b) yang berbatasan dengan ruangan lain
+function cover(r,s,a,b,io){
+  let c=0;
+  rooms.forEach(q=>{
+    if(q===r||(!io&&TYPES[q.type].open))return;
+    let adj,u,v;
+    if(s=='S'){adj=Math.abs(q.py+q.L-r.py)<1e-6;u=q.px;v=q.px+q.w}
+    else if(s=='N'){adj=Math.abs(q.py-(r.py+r.L))<1e-6;u=q.px;v=q.px+q.w}
+    else if(s=='W'){adj=Math.abs(q.px+q.w-r.px)<1e-6;u=q.py;v=q.py+q.L}
+    else{adj=Math.abs(q.px-(r.px+r.w))<1e-6;u=q.py;v=q.py+q.L}
+    if(adj)c+=Math.max(0,Math.min(b,v)-Math.max(a,u));
+  });
+  return c;
+}
+function autoDoor(r){
+  const cfg=TYPES[r.type];
+  if(r.type=='tamu'||r.type=='garasi')return 'S';
+  for(const s of ['S','E','W','N']){
+    const g=sideGeom(r.px,r.py,r.w,r.L,s);
+    if(g.L<cfg.door+.4)continue;
+    const a=(s=='S'||s=='N'?r.px:r.py)+.2;
+    if(cover(r,s,a,a+cfg.door,false)>=cfg.door-1e-6)return s;
+  }
+  return 'S';
+}
+function addWalls(r,x,y,t){
+  const cfg=TYPES[r.type],h=t/2,w=r.w,l=r.L;
+  WR.push([x-h,y-h,x+w+h,y+h],[x-h,y+l-h,x+w+h,y+l+h],[x-h,y-h,x+h,y+l+h],[x+w-h,y-h,x+w+h,y+l+h]);
+  const ds=r.door=='A'?autoDoor(r):r.door,ops=[];
+  const gD=sideGeom(x,y,w,l,ds);
+  if(cfg.door&&gD.L>=cfg.door+.2)ops.push({s:ds,k:r.type=='garasi'?'dbl':'door',wd:cfg.door,o:gD.L>=cfg.door+.5?.2:(gD.L-cfg.door)/2});
+  if(cfg.win){
+    for(const s of [OPP[ds],...['S','E','N','W'].filter(q=>q!=ds&&q!=OPP[ds])]){
+      const g=sideGeom(x,y,w,l,s),ww=Math.min(cfg.win,g.L*.45);
+      if(ww<.5)continue;
+      const n=(g.L>=4.5&&cfg.win>=1.2)?2:1,os=[];
+      for(let k=0;k<n;k++)os.push(g.L*(k+1)/(n+1)-ww/2);
+      const base=(s=='S'||s=='N'?x:y);
+      if(os.every(o=>cover(r,s,base+o,base+o+ww,false)<1e-6)){os.forEach(o=>ops.push({s,k:'win',wd:ww,o}));break}
+    }
+  }
+  ops.forEach(op=>{
+    const {P,d,n}=sideGeom(x,y,w,l,op.s);
+    const pt=(q,off)=>[P[0]+d[0]*q+n[0]*off,P[1]+d[1]*q+n[1]*off];
+    const A=pt(op.o,-h),B=pt(op.o+op.wd,h);
+    OP.push([Math.min(A[0],B[0]),Math.min(A[1],B[1]),Math.max(A[0],B[0]),Math.max(A[1],B[1])].map(R4));
+    if(op.k=='win'){[-h,0,h].forEach(f=>ln('JENDELA',...pt(op.o,f),...pt(op.o+op.wd,f)));return}
+    const deg=v=>(Math.atan2(v[1],v[0])*180/Math.PI+360)%360,cr=d[0]*n[1]-d[1]*n[0];
+    const leaf=(H,rad,dir,nd)=>{ // daun pintu + busur 90 derajat dari posisi tertutup (dir) ke terbuka (n)
+      ln('PINTU',H[0],H[1],H[0]+n[0]*rad,H[1]+n[1]*rad);
+      const c=dir[0]*n[1]-dir[1]*n[0];
+      arc('PINTU',H[0],H[1],rad,c>0?deg(dir):deg(n),c>0?deg(n):deg(dir));
+    };
+    const bb=[];
+    if(op.k=='door'){
+      const H=pt(op.o,h);leaf(H,op.wd,d);
+      bb.push(H[0],H[1],H[0]+d[0]*op.wd+n[0]*op.wd,H[1]+d[1]*op.wd+n[1]*op.wd);
+    }else{ // pintu ganda (garasi): dua daun, masing-masing setengah bukaan
+      const rad=op.wd/2,H1=pt(op.o,h),H2=pt(op.o+op.wd,h),md=[-d[0],-d[1]];
+      leaf(H1,rad,d);leaf(H2,rad,md);
+      bb.push(H1[0],H1[1],H2[0]+n[0]*rad,H2[1]+n[1]*rad);
+    }
+    OBS.push([Math.min(bb[0],bb[2]),Math.min(bb[1],bb[3]),Math.max(bb[0],bb[2]),Math.max(bb[1],bb[3])]);
+  });
+}
+// gabungkan semua pita dinding menjadi satu kontur bersih + arsiran SOLID
+function wallOutline(){
+  const rr=WR.map(r=>r.map(R4)),u=a=>[...new Set(a)].sort((p,q)=>p-q);
+  const xs=u([...rr,...OP].flatMap(r=>[r[0],r[2]])),ys=u([...rr,...OP].flatMap(r=>[r[1],r[3]]));
+  const nx=xs.length-1,ny=ys.length-1,F=[];
+  const inR=(r,cx,cy)=>cx>r[0]&&cx<r[2]&&cy>r[1]&&cy<r[3];
+  for(let i=0;i<nx;i++){F[i]=[];for(let j=0;j<ny;j++){
+    const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;
+    F[i][j]=rr.some(r=>inR(r,cx,cy))&&!OP.some(r=>inR(r,cx,cy));}}
+  const f=(i,j)=>i>=0&&j>=0&&i<nx&&j<ny&&F[i][j];
+  for(let i=0;i<=nx;i++){let s=null;for(let j=0;j<=ny;j++){
+    const e=j<ny&&f(i-1,j)!=f(i,j);
+    if(e&&s===null)s=j;
+    if(!e&&s!==null){ln('DINDING',xs[i],ys[s],xs[i],ys[j]);s=null}}}
+  for(let j=0;j<=ny;j++){let s=null;for(let i=0;i<=nx;i++){
+    const e=i<nx&&f(i,j-1)!=f(i,j);
+    if(e&&s===null)s=i;
+    if(!e&&s!==null){ln('DINDING',xs[s],ys[j],xs[i],ys[j]);s=null}}}
+  if(!$('hatch').checked)return;
+  let open={};
+  for(let j=0;j<ny;j++){
+    const cur={};let i=0;
+    while(i<nx){
+      if(!F[i][j]){i++;continue}
+      let k=i;while(k+1<nx&&F[k+1][j])k++;
+      const key=i+'-'+k;
+      if(open[key]){open[key].y1=ys[j+1];cur[key]=open[key]}
+      else{const q={k:'s',l:'ARSIR',x0:xs[i],y0:ys[j],x1:xs[k+1],y1:ys[j+1]};cur[key]=q;SO.push(q)}
+      i=k+1;
+    }
+    open=cur;
+  }
+}
+
+// ---------- Furnitur ----------
+function furn(r,x,y,t){
+  const W=r.w-t,H=r.L-t,ix=x+t/2,iy=y+t/2,cx=ix+W/2,top=iy+H;
+  const R=(a,b,c,d)=>rect('FURNITUR',a,b,c,d),L=(a,b,c,d)=>ln('FURNITUR',a,b,c,d),C=(a,b,c)=>cir('FURNITUR',a,b,c);
+  const hit=(a,b)=>a[0]<b[2]-.01&&a[2]>b[0]+.01&&a[1]<b[3]-.01&&a[3]>b[1]+.01;
+  // letakkan blok pada kandidat posisi pertama yang bebas dari pintu dan furnitur lain
+  const put=(w,h,cs)=>{for(const [px,py] of cs){
+    const bb=[px,py,px+w,py+h];
+    if(px<ix-.01||py<iy-.01||px+w>ix+W+.01||py+h>top+.01||OBS.some(o=>hit(bb,o)))continue;
+    OBS.push(bb);return [px,py]}return null};
+  switch(r.type){
+  case 'kamar':{
+    const bw=W>=2.5?1.6:1,bl=2;
+    const p=put(bw,bl,[[cx-bw/2,top-bl],[ix,top-bl],[ix+W-bw,top-bl],[cx-bw/2,iy],[ix,iy]]);
+    if(p){const [a,b]=p,hy=b>iy+.01?b+bl-.4:b+.05;
+      R(a,b,bw,bl);
+      if(bw>1.2){R(a+.1,hy,.6,.35);R(a+bw-.7,hy,.6,.35)}else R(a+(bw-.6)/2,hy,.6,.35);
+      L(a,b+bl*(hy>b+.1?.45:.55),a+bw,b+bl*(hy>b+.1?.45:.55));
+      [[a-.45],[a+bw+.05]].forEach(([nx])=>{if(put(.4,.4,[[nx,hy+(hy>b+.1?0:0)]])){R(nx,hy,.4,.4);C(nx+.2,hy+.2,.1)}});
+    }
+    const q=put(.6,1.2,[[ix+W-.6,iy+H/2-1.2],[ix,iy+H/2-1.2],[ix+W-.6,iy],[ix,iy]]);
+    if(q){R(q[0],q[1],.6,1.2);L(q[0],q[1]+.6,q[0]+.6,q[1]+.6);L(q[0]+.3,q[1]+.6,q[0]+.3,q[1]+.9)}
+    break}
+  case 'tamu':{
+    const sw=W>=3?2.1:1.6,sf=put(sw,.9,[[cx-sw/2,top-.9],[ix,top-.9],[ix+W-sw,top-.9]]);
+    if(sf){const [a,b]=sf;R(a,b,sw,.9);R(a,b,.18,.9);R(a+sw-.18,b,.18,.9);R(a+.18,b+.05,sw-.36,.55);L(a+.18,b+.6,a+sw-.18,b+.6);
+      const tb=put(1,.5,[[cx-.5,b-.95],[a+.2,b-.95]]);if(tb){R(tb[0],tb[1],1,.5);R(tb[0]+.08,tb[1]+.08,.84,.34)}
+      [[ix],[ix+W-.8]].forEach(([ax])=>{if(W>=3.4&&put(.8,.8,[[ax,b-1]])){R(ax,b-1,.8,.8);R(ax+.08,b-.92,.64,.5)}});}
+    const tv=put(1.5,.4,[[cx-.75,iy],[cx-.75,iy+.4]]);if(tv){R(tv[0],tv[1],1.5,.4);R(tv[0]+.25,tv[1]+.1,1,.12)}
+    break}
+  case 'makan':{
+    for(const tw of [1.6,1.2]){
+      const p=put(tw+.8,1.8,[[cx-(tw+.8)/2,iy+H/2-.9]]);
+      if(p){const [a,b]=p;R(a+.4,b+.45,tw,.9);
+        [.25,.75].forEach(f=>{const px=a+.4+tw*f-.2;R(px,b,.4,.4);R(px,b+1.4,.4,.4)});break}
+    }
+    break}
+  case 'dapur':{
+    const cl=W>=2.2?W-.7:W,c=put(cl,.6,[[ix,top-.6],[ix,iy]]);
+    if(c){const [a,b]=c;R(a,b,cl,.6);
+      const sx=a+cl*.12;R(sx,b+.1,.35,.4);R(sx+.4,b+.1,.35,.4);C(sx+.375,b+.55,.04);
+      if(cl>=1.9){const px=a+cl-.75;R(px,b+.05,.6,.5);[[.15,.15],[.45,.15],[.15,.38],[.45,.38]].forEach(([u,v])=>C(px+u,b+.05+v,.08))}
+      if(W>=2.2){const fr=put(.65,.65,[[ix+W-.65,b]]);if(fr){R(ix+W-.65,b,.65,.65);L(ix+W-.65,b,ix+W,b+.65)}}}
+    break}
+  case 'km':{
+    if(W>=1.7&&H>=1.7){const sh=put(.9,.9,[[ix+W-.9,top-.9],[ix,top-.9],[ix+W-.9,iy],[ix,iy]]);
+      if(sh){const [a,b]=sh;R(a,b,.9,.9);L(a,b,a+.9,b+.9);L(a,b+.9,a+.9,b);C(a+.45,b+.45,.04)}}
+    const tl=put(.4,.7,[[ix+W-.45,top-.7],[ix,top-.7],[ix+W-.45,iy],[ix,iy]]);
+    if(tl){const [a,b]=tl,tp=b>iy+.01;R(a,tp?b+.5:b,.4,.2);R(a+.03,tp?b+.05:b+.2,.34,.45);C(a+.2,tp?b+.27:b+.42,.1)}
+    const sk=put(.5,.45,[[ix,top-.45],[ix+W-.5,top-.45],[ix,iy],[ix+W-.5,iy]]);
+    if(sk){R(sk[0],sk[1],.5,.45);C(sk[0]+.25,sk[1]+.22,.14)}
+    break}
+  case 'garasi':{
+    const car=put(1.8,4.2,[[cx-.9,iy+(H-4.2)/2]]);
+    if(car){const [a,b]=car;R(a,b,1.8,4.2);L(a,b+3.3,a+1.8,b+3.3);
+      L(a+.15,b+3.3,a+.3,b+2.6);L(a+1.65,b+3.3,a+1.5,b+2.6);L(a+.3,b+2.6,a+1.5,b+2.6);
+      R(a+.25,b+1.1,1.3,1.5);L(a+.3,b+.9,a+1.5,b+.9);
+      [.5,2.8].forEach(wy=>{R(a-.06,b+wy,.12,.6);R(a+1.74,b+wy,.12,.6)})}
+    break}
+  }
+}
+
+// ---------- Label: dicari area bebas (horizontal atau vertikal) ----------
+function placeLabel(r,ix,iy,W,H){
+  const full=[r.name,`${r.w.toFixed(2)} x ${r.L.toFixed(2)} m`,`${(r.w*r.L).toFixed(1)} m2`];
+  const hit=(a,b)=>a[0]<b[2]+.05&&a[2]>b[0]-.05&&a[1]<b[3]+.05&&a[3]>b[1]-.05;
+  for(const lines of [full,full.slice(0,2),full.slice(0,1)])
+    for(const sc of [1,.85,.7])
+      for(const v of [0,1]){
+        const mx=Math.max(...lines.map(s=>s.length)),h=Math.min(.25,((v?H:W)-.2)/(mx*.75))*sc;
+        if(h<.09)continue;
+        const bw=mx*.75*h,bh=lines.length*h*1.5,ww=v?bh:bw,hh=v?bw:bh;
+        if(ww>W||hh>H)continue;
+        for(const cx of [ix+W/2,ix+ww/2+.05,ix+W-ww/2-.05])
+          for(let by=iy+.05;by+hh<=iy+H-.05;by+=.1){
+            const bb=[cx-ww/2,by,cx+ww/2,by+hh];
+            if(OBS.some(o=>hit(bb,o)))continue;
+            lines.forEach((s,i)=>v?txt('TEKS',bb[0]+i*1.5*h+h,by+hh/2,h,s,90):txt('TEKS',cx,by+hh-(i+1)*1.5*h+.4*h,h,s));
+            return;
+          }
+      }
+  txt('TEKS',ix+W/2,iy+H/2,.1,r.name);
+}
+
+// ---------- Susun seluruh gambar ----------
+function build(){
+  E=[];WR=[];OP=[];SO=[];
+  const LW=parseFloat($('lw').value)||12,LL=parseFloat($('ll').value)||14,t=Math.max(.05,parseFloat($('wt').value)||.15);
+  const s=Math.max(parseFloat($('sp').value)||0,t/2);
+  rect('LAHAN',0,0,LW,LL);
+  const {over,area,maxY}=layout(LW,LL,s);
+  rooms.forEach(r=>{
+    const x=r.px,y=r.py;OBS=[];
+    if(TYPES[r.type].open)rect('DINDING',x,y,r.w,r.L);else addWalls(r,x,y,t);
+    furn(r,x,y,t);
+    placeLabel(r,x+t/2,y+t/2,r.w-t,r.L-t);
+    if(Math.abs(x-s)<1e-6)vdim(y,y+r.L,-.6,r.L.toFixed(2),s-t/2);
+    if(Math.abs(y-s)<1e-6)hdim(x,x+r.w,-.6,r.w.toFixed(2),s-t/2);
+  });
+  wallOutline();
+  hdim(0,LW,-1.4,LW.toFixed(2),0);vdim(0,LL,-1.4,LL.toFixed(2),0);
+  const top=Math.max(LL,maxY)+t/2+.5;
+  txt('TEKS',LW/2,top+.6,.4,'DENAH RUMAH');
+  txt('TEKS',LW/2,top+.25,.22,`Lahan ${LW} x ${LL} m = ${(LW*LL).toFixed(1)} m2  |  Skala 1:100  |  Satuan: meter`);
+  const nx=LW+1.2,ny=LL-1.2;cir('TEKS',nx,ny,.5);ln('TEKS',nx,ny-.5,nx,ny+.5);ln('TEKS',nx-.18,ny+.2,nx,ny+.5);ln('TEKS',nx+.18,ny+.2,nx,ny+.5);txt('TEKS',nx,ny+.65,.3,'U');
+  E=[...SO,...E];
+  const info=$('info');info.className=over?'bad':'';
+  info.textContent=over?`Ruangan melebihi batas lahan (sempadan ${s.toFixed(2)} m). Luas ruangan ${area.toFixed(1)} m2, lahan ${(LW*LL).toFixed(1)} m2. Kecilkan ukuran atau kurangi ruangan.`
+    :`Luas ruangan ${area.toFixed(1)} m2 dari lahan ${(LW*LL).toFixed(1)} m2 (KDB ${(area/(LW*LL)*100).toFixed(0)}%). Semua ruangan berada di dalam sempadan.`;
+}
+
+// ---------- Pratinjau SVG ----------
+const COL={LAHAN:'#8A9A94',DINDING:'#1C2A35',ARSIR:'#2B3944',PINTU:'#0F7B3F',JENDELA:'#1F5FBF',FURNITUR:'#9A5B13',DIMENSI:'#B3261E',TEKS:'#0F6E6E'};
+function svgMarkup(){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  const ext=(x,y)=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,-y);y1=Math.max(y1,-y)};
+  let s='';
+  E.forEach(e=>{const c=COL[e.l];
+    if(e.k=='s'){ext(e.x0,e.y0);ext(e.x1,e.y1);s+=`<rect x="${e.x0}" y="${-e.y1}" width="${e.x1-e.x0}" height="${e.y1-e.y0}" fill="${c}"/>`}
+    else if(e.k=='l'){ext(e.a,e.b);ext(e.c,e.d);s+=`<line x1="${e.a}" y1="${-e.b}" x2="${e.c}" y2="${-e.d}" stroke="${c}" stroke-width="${e.l=='DINDING'?1.6:1}" vector-effect="non-scaling-stroke"/>`}
+    else if(e.k=='a'){ext(e.x-e.r,e.y-e.r);ext(e.x+e.r,e.y+e.r);const p=a=>[e.x+e.r*Math.cos(a*Math.PI/180),-(e.y+e.r*Math.sin(a*Math.PI/180))],A=p(e.a0),B=p(e.a1);
+      s+=`<path d="M${A[0]} ${A[1]}A${e.r} ${e.r} 0 0 0 ${B[0]} ${B[1]}" fill="none" stroke="${c}" vector-effect="non-scaling-stroke"/>`}
+    else if(e.k=='c'){ext(e.x-e.r,e.y-e.r);ext(e.x+e.r,e.y+e.r);s+=`<circle cx="${e.x}" cy="${-e.y}" r="${e.r}" fill="none" stroke="${c}" vector-effect="non-scaling-stroke"/>`}
+    else{ext(e.x,e.y);const tr=e.rot?` transform="rotate(${-e.rot} ${e.x} ${-e.y})"`:'';
+      s+=`<text x="${e.x}" y="${-e.y}" font-size="${e.h}" fill="${c}" text-anchor="middle" font-family="Arial,sans-serif"${tr}>${e.s.replace(/&/g,'&amp;')}</text>`}
+  });
+  const m=.8;
+  return {vb:`${x0-m} ${y0-m} ${x1-x0+2*m} ${y1-y0+2*m}`,body:s};
+}
+function draw(){build();const {vb,body}=svgMarkup();$('view').setAttribute('viewBox',vb);$('view').innerHTML=body}
+
+// ---------- Ekspor ----------
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('svg').onclick=()=>{const {vb,body}=svgMarkup();dl('denah-rumah.svg',`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="1200"><rect x="-1000" y="-1000" width="3000" height="3000" fill="#fff"/>${body}</svg>`,'image/svg+xml')};
+$('dxf').onclick=()=>{
+  build();const f=+$('unit').value,n=v=>(v*f).toFixed(4);
+  const LAY=[['LAHAN',8],['DINDING',7],['ARSIR',9],['PINTU',3],['JENDELA',5],['FURNITUR',30],['DIMENSI',2],['TEKS',4]];
+  const o=['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','0','ENDSEC',
+    '0','SECTION','2','TABLES','0','TABLE','2','LTYPE','70','1','0','LTYPE','2','CONTINUOUS','70','0','3','Solid line','72','65','73','0','40','0.0','0','ENDTAB',
+    '0','TABLE','2','LAYER','70',String(LAY.length)];
+  LAY.forEach(([a,c])=>o.push('0','LAYER','2',a,'70','0','62',String(c),'6','CONTINUOUS'));
+  o.push('0','ENDTAB','0','ENDSEC','0','SECTION','2','ENTITIES');
+  E.forEach(e=>{
+    if(e.k=='s')o.push('0','SOLID','8',e.l,'10',n(e.x0),'20',n(e.y0),'30','0','11',n(e.x1),'21',n(e.y0),'31','0','12',n(e.x0),'22',n(e.y1),'32','0','13',n(e.x1),'23',n(e.y1),'33','0');
+    else if(e.k=='l')o.push('0','LINE','8',e.l,'10',n(e.a),'20',n(e.b),'30','0','11',n(e.c),'21',n(e.d),'31','0');
+    else if(e.k=='a')o.push('0','ARC','8',e.l,'10',n(e.x),'20',n(e.y),'30','0','40',n(e.r),'50',String(e.a0),'51',String(e.a1));
+    else if(e.k=='c')o.push('0','CIRCLE','8',e.l,'10',n(e.x),'20',n(e.y),'30','0','40',n(e.r));
+    else o.push('0','TEXT','8',e.l,'10',n(e.x),'20',n(e.y),'30','0','40',n(e.h),'1',e.s,'50',String(e.rot),'72','1','11',n(e.x),'21',n(e.y),'31','0');
+  });
+  o.push('0','ENDSEC','0','EOF');
+  dl('denah-rumah.dxf',o.join('\r\n'),'application/dxf');
+};
+
+renderList();draw();
+</script>
+</body>
+</html>
